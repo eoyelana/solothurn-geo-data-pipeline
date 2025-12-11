@@ -51,7 +51,7 @@ The primary goal is to demonstrate a modern data engineering workflow, and autom
 
 1.  **Clone the Repository:**
     ```
-    git clone https://github.com/your-username/solothurn-data-pipeline.git
+    git clone https://github.com/eoyelana/solothurn-data-pipeline.git
     cd solothurn-data-pipeline
     ```
 2.  **Create the Database Table:**
