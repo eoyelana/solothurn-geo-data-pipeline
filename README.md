@@ -2,7 +2,9 @@
 
 ## Overview
 
-This project is a data pipeline built with Apache Airflow to process geospatial building data from the Solothurn GeoPortal. The pipeline extracts building data, cleans and transforms it, loads it into a PostGIS-enabled PostgreSQL database, and then performs a final geometric query.
+This project is a data pipeline built with Apache Airflow to process geospatial building data from the [Solothurn](https://geo.so.ch/map/?t=default&l=ch.so.agi.av.bodenbedeckung_einzelobjekte%2Cch.so.agi.av.rohrleitungen%21%2Cch.so.agi.av.gebaeudeadressen%21%2Cch.so.agi.av.grundstuecke%2Cch.so.agi.av.nomenklatur%21%2Cch.so.agi.hoheitsgrenzen%21%2Cch.so.agi.av.fixpunkte%21&bl=hintergrundkarte_sw&c=2619558%2C1239048&s=1890) GeoPortal. The pipeline extracts building data, cleans and transforms it, loads it into a PostGIS-enabled PostgreSQL database, and then performs a final geometric query.
+
+You can explore the full Solothurn open geodata dataset [here](https://data.geo.so.ch/).
 
 The pipeline automates the following key tasks as per the assignment's requirements:
 
