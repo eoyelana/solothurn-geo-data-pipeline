@@ -28,7 +28,8 @@ Thumbs.db
 .env
 .env.local
 
-# Airflow logs and SQLite database (if running locally)
+# Airflow logs and PostgreSQL database (if running locally)
+airflow_local/
 airflow.db
 airflow.cfg
 logs/
