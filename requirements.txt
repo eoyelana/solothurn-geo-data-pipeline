@@ -44,3 +44,10 @@ typing_extensions==4.15.0
 tzdata==2025.2
 urllib3==2.6.1
 wcwidth==0.2.14
+apache-airflow>=2.8.0
+apache-airflow-providers-postgres
+geopandas
+sqlalchemy
+psycopg2-binary
+requests
+pandas
