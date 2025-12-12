@@ -6,7 +6,8 @@ import zipfile
 import geopandas as gpd
 import pandas as pd
 from sqlalchemy import create_engine
-from airflow.providers.postgres.hooks.postgres import PostgresHook # Professional Way
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import variable
 import os
 
@@ -18,7 +19,7 @@ processed_data_path = Path(base_dir) / "processed"
 shapefile_zip = raw_data_path / "solothurn.shp.zip"
 
 @dag(
-    dag_id='solothurn_building_pipeline',
+    dag_id='solothurn_building_pipeline_upsert',
     start_date=pendulum.datetime(2024, 1, 1, tz="UTC"),
     catchup=False,
     schedule=None,
@@ -43,16 +44,9 @@ def solothurn_building_pipeline():
         return str(raw_data_path)
 
     @task
-    def clean_staging_table():
-        PostgresHook(postgres_conn_id='postgres_default').run("TRUNCATE TABLE building;")
-
-
-    @task
-    def transform_and_load(data_dir: str):
-        """Filters, transforms, and loads building data into PostGIS."""
+    def load_to_staging(data_dir: str):
+        """Loads data into a temporary staging table."""
         raw_path = Path(data_dir)
-        
-        # Correctly load both files as per requirements
         files_to_load = [raw_path / "bodenbedeckung.shp", raw_path / "bodenbedeckung_proj.shp"]
         gdfs = []
         for f in files_to_load:
@@ -100,9 +94,30 @@ def solothurn_building_pipeline():
         engine = hook.get_sqlalchemy_engine()
 
         # 'building' is the table name. 
-        # if_exists='append' assumes table was created with the SQL script first.
-        # if_exists='replace' would drop the custom table with indices.
-        gdf_wgs84.to_postgis('building', engine, if_exists='append', index=False)
+        # Write to 'building_staging', and use 'replace' for an UPSERT update
+        print("Writing to staging table...")
+        gdf_wgs84.to_postgis('building_staging', engine, if_exists='replace', index=False)
+    
+    # --- CHANGE 2: The UPSERT Task (New Logic) ---
+    merge_data = SQLExecuteQueryOperator(
+        task_id="merge_staging_to_production",
+        conn_id="postgres_default",
+        sql="""
+            -- Insert rows from Staging to Production
+            INSERT INTO building (egid, building_type, area, geo_polygon, geo_center)
+            SELECT egid, building_type, area, geo_polygon, geo_center
+            FROM building_staging
+            
+            -- If EGID exists, UPDATE the row instead of failing
+            ON CONFLICT (egid) 
+            DO UPDATE SET
+                building_type = EXCLUDED.building_type,
+                area          = EXCLUDED.area,
+                geo_polygon   = EXCLUDED.geo_polygon,
+                geo_center    = EXCLUDED.geo_center,
+                create_timestamp = NOW();
+        """
+    )
 
 
     @task
@@ -126,10 +141,9 @@ def solothurn_building_pipeline():
 
     # Define task dependencies
     download = download_and_extract_data()
-    clean = clean_staging_table()
-    load_task = transform_and_load(download)
+    staging = load_to_staging(download)
     query_task = query_large_buildings()
 
-    download >> clean >> load_task >> query_task
+    download >> staging >> merge_data >> query_task
 
 solothurn_building_pipeline()
